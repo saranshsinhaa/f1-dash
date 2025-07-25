@@ -270,7 +270,7 @@ export default function Home() {
             }}
           >
             <p style={{ marginBottom: "var(--space-4)" }}>
-              <strong>NO SESSION</strong>
+              <strong>🚫 NO SESSION 🚫</strong>
             </p>
             <p>Come back later when there is a live session</p>
           </div>
