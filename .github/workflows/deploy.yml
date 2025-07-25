@@ -46,6 +46,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
+            export PATH="/home/deploy/.nvm/versions/node/v20.19.4/bin:$PATH"
             cd /home/deploy/f1-dash
             git pull origin main
             yarn install --frozen-lockfile
