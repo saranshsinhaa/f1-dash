@@ -70,17 +70,19 @@ export default function Home() {
   const [triggerConnection, setTriggerConnection] = useState(0);
   const [triggerTick, setTriggerTick] = useState(0);
   
-  // State for draggable components order
   const [componentOrder, setComponentOrder] = useState([
-    'timing-data',
-    'track-messages-radio',
-    'speed-trap'
+    'timing-data-1',
+    'timing-data-2', 
+    'track-map',
+    'race-control-messages',
+    'team-radio',
+    'speed-trap',
+    'empty-placeholder'
   ]);
 
   const socket = useRef();
   const retry = useRef();
 
-  // Handle drag end
   const handleDragEnd = (result) => {
     if (!result.destination) return;
     
@@ -89,6 +91,23 @@ export default function Home() {
     items.splice(result.destination.index, 0, reorderedItem);
     
     setComponentOrder(items);
+  };
+
+  const groupComponentsIntoRows = (components) => {
+    const rows = [];
+    for (let i = 0; i < components.length; i += 3) {
+      rows.push(components.slice(i, i + 3));
+    }
+    return rows;
+  };
+
+  const getComponentWidth = (componentsInRow) => {
+    switch (componentsInRow) {
+      case 1: return '100%';
+      case 2: return '50%';
+      case 3: return '33.333%';
+      default: return '33.333%';
+    }
   };
 
   const initWebsocket = useCallback((handleMessage) => {
@@ -296,6 +315,238 @@ export default function Home() {
         : ExtrapolatedClock.Remaining
       : undefined;
 
+  const renderTimingData1 = () => {
+    if (!TimingData || !CarData) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "300px" }}>
+          <p>NO DATA YET</p>
+        </div>
+      );
+    }
+
+    const lines = Object.entries(TimingData.Lines).sort(sortPosition);
+    return (
+      <>
+        <div style={{ padding: "var(--space-2) var(--space-3)", backgroundColor: "var(--colour-offset)", borderBottom: "1px solid var(--colour-border)" }}>
+          <p><strong>LIVE TIMING DATA (1-10)</strong></p>
+        </div>
+        <div>
+          <TableHeader />
+          {lines.slice(0, 10).map(([racingNumber, line]) => (
+            <Driver
+              key={`timing-data-1-${racingNumber}`}
+              racingNumber={racingNumber}
+              line={line}
+              DriverList={DriverList}
+              CarData={CarData}
+              TimingAppData={TimingAppData}
+              TimingStats={TimingStats}
+              ChampionshipPrediction={ChampionshipPrediction}
+            />
+          ))}
+        </div>
+      </>
+    );
+  };
+
+  const renderTimingData2 = () => {
+    if (!TimingData || !CarData) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "300px" }}>
+          <p>NO DATA YET</p>
+        </div>
+      );
+    }
+
+    const lines = Object.entries(TimingData.Lines).sort(sortPosition);
+    return (
+      <>
+        <div style={{ padding: "var(--space-2) var(--space-3)", backgroundColor: "var(--colour-offset)", borderBottom: "1px solid var(--colour-border)" }}>
+          <p><strong>LIVE TIMING DATA (11-20)</strong></p>
+        </div>
+        <div>
+          <TableHeader />
+          {lines.slice(10, 20).map(([racingNumber, line]) => (
+            <Driver
+              key={`timing-data-2-${racingNumber}`}
+              racingNumber={racingNumber}
+              line={line}
+              DriverList={DriverList}
+              CarData={CarData}
+              TimingAppData={TimingAppData}
+              TimingStats={TimingStats}
+              ChampionshipPrediction={ChampionshipPrediction}
+            />
+          ))}
+        </div>
+      </>
+    );
+  };
+
+  const renderTrackMap = () => (
+    <>
+      <div style={{ padding: "var(--space-2) var(--space-3)", backgroundColor: "var(--colour-offset)", borderBottom: "1px solid var(--colour-border)" }}>
+        <p><strong>TRACK</strong></p>
+      </div>
+      {!!Position ? (
+        <Map
+          circuit={SessionInfo.Meeting.Circuit.Key}
+          Position={Position.Position[Position.Position.length - 1]}
+          DriverList={DriverList}
+          TimingData={TimingData}
+          TrackStatus={TrackStatus}
+          WindDirection={WeatherData.WindDirection}
+        />
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "400px" }}>
+          <p>NO DATA YET</p>
+        </div>
+      )}
+    </>
+  );
+
+  const renderRaceControlMessages = () => (
+    <>
+      <div style={{ padding: "var(--space-2) var(--space-3)", backgroundColor: "var(--colour-offset)", borderBottom: "1px solid var(--colour-border)" }}>
+        <p><strong>RACE CONTROL MESSAGES</strong></p>
+      </div>
+      {!!RaceControlMessages ? (
+        <ul style={{ listStyle: "none", height: "200px", overflow: "auto", flexGrow: 1 }}>
+          {[
+            ...Object.values(RaceControlMessages.Messages),
+            ...Object.values(SessionData.StatusSeries),
+          ]
+            .sort(sortUtc)
+            .map((event, i) => (
+              <li key={`race-control-${event.Utc}-${i}`} style={{ padding: "var(--space-3)", display: "flex" }}>
+                <span style={{ color: "grey", whiteSpace: "nowrap", marginRight: "var(--space-4)" }}>
+                  {moment.utc(event.Utc).local().format("HH:mm:ss")}
+                  {event.Lap && ` / Lap ${event.Lap}`}
+                </span>
+                {event.Category === "Flag" && (
+                  <span style={{
+                    backgroundColor: getFlagColour(event.Flag).bg,
+                    color: getFlagColour(event.Flag).fg ?? "var(--colour-fg)",
+                    border: "1px solid var(--colour-border)",
+                    borderRadius: "var(--space-1)",
+                    padding: "0 var(--space-2)",
+                    marginRight: "var(--space-3)",
+                  }}>
+                    FLAG
+                  </span>
+                )}
+                {event.Message && <span>{event.Message.trim()}</span>}
+                {event.TrackStatus && <span>TrackStatus: {event.TrackStatus}</span>}
+                {event.SessionStatus && <span>SessionStatus: {event.SessionStatus}</span>}
+              </li>
+            ))}
+        </ul>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+          <p>NO DATA YET</p>
+        </div>
+      )}
+    </>
+  );
+
+  const renderTeamRadio = () => (
+    <>
+      <div style={{ padding: "var(--space-2) var(--space-3)", backgroundColor: "var(--colour-offset)", borderBottom: "1px solid var(--colour-border)" }}>
+        <p><strong>TEAM RADIO</strong></p>
+      </div>
+      {!!TeamRadio ? (
+        <ul style={{ listStyle: "none", height: "200px", overflow: "auto", flexGrow: 1 }}>
+          {[...Object.values(TeamRadio.Captures).sort(sortUtc)].map((radio, i) => {
+            const driver = DriverList[radio.RacingNumber];
+            return (
+              <Radio
+                key={`team-radio-${radio.Utc}-${i}`}
+                radio={radio}
+                path={`${f1Url}/static/${SessionInfo.Path}${radio.Path}`}
+                driver={driver}
+              />
+            );
+          })}
+        </ul>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+          <p>NO DATA YET</p>
+        </div>
+      )}
+    </>
+  );
+
+  const renderSpeedTrap = () => (
+    <>
+      <div style={{ padding: "var(--space-2) var(--space-3)", backgroundColor: "var(--colour-offset)", borderBottom: "1px solid var(--colour-border)" }}>
+        <p><strong>SPEED TRAP DATA</strong></p>
+      </div>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: speedTrapColumns,
+        padding: "var(--space-2) 24px var(--space-2) var(--space-3)",
+        backgroundColor: "var(--colour-offset)",
+      }}>
+        <p>DRIVER</p>
+        <p>SECTOR 1</p>
+        <p>SECTOR 2</p>
+        <p>FINISH LINE</p>
+        <p>SPEED TRAP</p>
+      </div>
+      {!!TimingData && !!DriverList && (
+        <ul style={{ listStyle: "none", height: "200px", overflow: "auto", flexGrow: 1 }}>
+          {Object.entries(TimingData.Lines)
+            .sort(sortPosition)
+            .map(([racingNumber, line]) => (
+              <SpeedTrap
+                key={`speed-trap-${racingNumber}`}
+                racingNumber={racingNumber}
+                driver={DriverList[racingNumber]}
+                line={line}
+                statsLine={TimingStats.Lines[racingNumber]}
+              />
+            ))}
+        </ul>
+      )}
+    </>
+  );
+
+  const renderEmptyPlaceholder = () => (
+    <div style={{ 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center", 
+      height: "100px",
+      border: "2px dashed var(--colour-border)",
+      borderRadius: "var(--space-1)",
+      color: "var(--colour-border)",
+      fontSize: "14px"
+    }}>
+      Drop components here
+    </div>
+  );
+
+  const renderComponent = (componentId) => {
+    switch (componentId) {
+      case 'timing-data-1':
+        return renderTimingData1();
+      case 'timing-data-2':
+        return renderTimingData2();
+      case 'track-map':
+        return renderTrackMap();
+      case 'race-control-messages':
+        return renderRaceControlMessages();
+      case 'team-radio':
+        return renderTeamRadio();
+      case 'speed-trap':
+        return renderSpeedTrap();
+      case 'empty-placeholder':
+        return renderEmptyPlaceholder();
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       <Head>
@@ -422,13 +673,25 @@ export default function Home() {
                   display: "flex",
                   flexDirection: "column",
                   gap: "var(--space-3)",
+                  padding: "var(--space-3)",
                 }}
               >
-                {componentOrder.map((itemId, index) => {
-                  switch (itemId) {
-                    case 'timing-data':
+                {groupComponentsIntoRows(componentOrder).map((row, rowIndex) => (
+                  <div
+                    key={`row-${rowIndex}`}
+                    style={{
+                      display: "flex",
+                      gap: "var(--space-3)",
+                      width: "100%",
+                      alignItems: "stretch",
+                    }}
+                  >
+                    {row.map((itemId, indexInRow) => {
+                      const globalIndex = rowIndex * 3 + indexInRow;
+                      const isEmptyPlaceholder = itemId === 'empty-placeholder';
+                      
                       return (
-                        <Draggable key={itemId} draggableId={itemId} index={index}>
+                        <Draggable key={itemId} draggableId={itemId} index={globalIndex}>
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
@@ -436,369 +699,39 @@ export default function Home() {
                               {...provided.dragHandleProps}
                               style={{
                                 ...provided.draggableProps.style,
+                                width: getComponentWidth(row.length),
                                 backgroundColor: snapshot.isDragging ? "var(--colour-offset)" : "transparent",
                                 borderRadius: "var(--space-1)",
                                 padding: snapshot.isDragging ? "var(--space-2)" : "0",
                                 border: snapshot.isDragging ? "2px solid var(--colour-border)" : "2px solid transparent",
                                 cursor: "grab",
                                 transition: "all 0.2s ease",
+                                display: "flex",
+                                flexDirection: "column",
+                                flex: "1",
                               }}
                             >
                               <div
                                 style={{
-                                  padding: "var(--space-2) var(--space-3)",
-                                  backgroundColor: "var(--colour-offset)",
+                                  backgroundColor: isEmptyPlaceholder ? "transparent" : "var(--colour-bg)",
+                                  border: isEmptyPlaceholder ? "none" : "1px solid var(--colour-border)",
+                                  borderRadius: "var(--space-1)",
+                                  overflow: "hidden",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  height: "100%",
+                                  minHeight: isEmptyPlaceholder ? "100px" : "400px",
                                 }}
                               >
-                                <p>
-                                  <strong>LIVE TIMING DATA</strong>
-                                </p>
+                                {renderComponent(itemId)}
                               </div>
-                              <ResponsiveTable
-                                style={{
-                                  gridTemplateColumns: !TimingData ? "1fr" : undefined,
-                                }}
-                              >
-                                {!!TimingData && !!CarData ? (
-                                  <>
-                                    {(() => {
-                                      const lines = Object.entries(TimingData.Lines).sort(
-                                        sortPosition
-                                      );
-                                      return (
-                                        <>
-                                          <div
-                                            style={{
-                                              borderRight: "1px solid var(--colour-border)",
-                                            }}
-                                          >
-                                            <TableHeader />
-                                            {lines.slice(0, 10).map(([racingNumber, line]) => (
-                                              <Driver
-                                                key={`timing-data-${racingNumber}`}
-                                                racingNumber={racingNumber}
-                                                line={line}
-                                                DriverList={DriverList}
-                                                CarData={CarData}
-                                                TimingAppData={TimingAppData}
-                                                TimingStats={TimingStats}
-                                                ChampionshipPrediction={ChampionshipPrediction}
-                                              />
-                                            ))}
-                                          </div>
-                                          <div>
-                                            <TableHeader />
-                                            {lines
-                                              .slice(10, 20)
-                                              .map(([racingNumber, line], pos) => (
-                                                <Driver
-                                                  key={`timing-data-${racingNumber}`}
-                                                  racingNumber={racingNumber}
-                                                  line={line}
-                                                  DriverList={DriverList}
-                                                  CarData={CarData}
-                                                  TimingAppData={TimingAppData}
-                                                  TimingStats={TimingStats}
-                                                  ChampionshipPrediction={ChampionshipPrediction}
-                                                />
-                                              ))}
-                                          </div>
-                                        </>
-                                      );
-                                    })()}
-                                  </>
-                                ) : (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                    }}
-                                  >
-                                    <p>NO DATA YET</p>
-                                  </div>
-                                )}
-                              </ResponsiveTable>
                             </div>
                           )}
                         </Draggable>
                       );
-                    case 'track-messages-radio':
-                      return (
-                        <Draggable key={itemId} draggableId={itemId} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              style={{
-                                ...provided.draggableProps.style,
-                                backgroundColor: snapshot.isDragging ? "var(--colour-offset)" : "transparent",
-                                borderRadius: "var(--space-1)",
-                                padding: snapshot.isDragging ? "var(--space-2)" : "0",
-                                border: snapshot.isDragging ? "2px solid var(--colour-border)" : "2px solid transparent",
-                                cursor: "grab",
-                                transition: "all 0.2s ease",
-                              }}
-                            >
-                              <ResponsiveTable
-                                cols="2fr 2fr 1fr"
-                                style={{
-                                  borderBottom: "1px solid var(--colour-border)",
-                                }}
-                              >
-                                <div style={{ borderRight: "1px solid var(--colour-border)" }}>
-                                  <div
-                                    style={{
-                                      padding: "var(--space-2) var(--space-3)",
-                                      backgroundColor: "var(--colour-offset)",
-                                    }}
-                                  >
-                                    <p>
-                                      <strong>TRACK</strong>
-                                    </p>
-                                  </div>
-                                  {!!Position ? (
-                                    <Map
-                                      circuit={SessionInfo.Meeting.Circuit.Key}
-                                      Position={Position.Position[Position.Position.length - 1]}
-                                      DriverList={DriverList}
-                                      TimingData={TimingData}
-                                      TrackStatus={TrackStatus}
-                                      WindDirection={WeatherData.WindDirection}
-                                    />
-                                  ) : (
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        height: "400px",
-                                      }}
-                                    >
-                                      <p>NO DATA YET</p>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div
-                                  style={{
-                                    width: "100%",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    borderRight: "1px solid var(--colour-border)",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      padding: "var(--space-2) var(--space-3)",
-                                      backgroundColor: "var(--colour-offset)",
-                                    }}
-                                  >
-                                    <p>
-                                      <strong>RACE CONTROL MESSAGES</strong>
-                                    </p>
-                                  </div>
-                                  {!!RaceControlMessages ? (
-                                    <ul
-                                      style={{
-                                        listStyle: "none",
-                                        height: "200px",
-                                        overflow: "auto",
-                                        flexGrow: 1,
-                                      }}
-                                    >
-                                      {[
-                                        ...Object.values(RaceControlMessages.Messages),
-                                        ...Object.values(SessionData.StatusSeries),
-                                      ]
-                                        .sort(sortUtc)
-                                        .map((event, i) => (
-                                          <li
-                                            key={`race-control-${event.Utc}-${i}`}
-                                            style={{ padding: "var(--space-3)", display: "flex" }}
-                                          >
-                                            <span
-                                              style={{
-                                                color: "grey",
-                                                whiteSpace: "nowrap",
-                                                marginRight: "var(--space-4)",
-                                              }}
-                                            >
-                                              {moment.utc(event.Utc).local().format("HH:mm:ss")}
-                                              {event.Lap && ` / Lap ${event.Lap}`}
-                                            </span>
-                                            {event.Category === "Flag" && (
-                                              <span
-                                                style={{
-                                                  backgroundColor: getFlagColour(event.Flag).bg,
-                                                  color:
-                                                    getFlagColour(event.Flag).fg ??
-                                                    "var(--colour-fg)",
-                                                  border: "1px solid var(--colour-border)",
-                                                  borderRadius: "var(--space-1)",
-                                                  padding: "0 var(--space-2)",
-                                                  marginRight: "var(--space-3)",
-                                                }}
-                                              >
-                                                FLAG
-                                              </span>
-                                            )}
-                                            {event.Message && <span>{event.Message.trim()}</span>}
-                                            {event.TrackStatus && (
-                                              <span>TrackStatus: {event.TrackStatus}</span>
-                                            )}
-                                            {event.SessionStatus && (
-                                              <span>SessionStatus: {event.SessionStatus}</span>
-                                            )}
-                                          </li>
-                                        ))}
-                                    </ul>
-                                  ) : (
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        height: "100%",
-                                      }}
-                                    >
-                                      <p>NO DATA YET</p>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div
-                                  style={{
-                                    width: "100%",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      padding: "var(--space-2) var(--space-3)",
-                                      backgroundColor: "var(--colour-offset)",
-                                    }}
-                                  >
-                                    <p>
-                                      <strong>TEAM RADIO</strong>
-                                    </p>
-                                  </div>
-                                  {!!TeamRadio ? (
-                                    <ul
-                                      style={{
-                                        listStyle: "none",
-                                        height: "200px",
-                                        overflow: "auto",
-                                        flexGrow: 1,
-                                      }}
-                                    >
-                                      {[...Object.values(TeamRadio.Captures).sort(sortUtc)].map(
-                                        (radio, i) => {
-                                          const driver = DriverList[radio.RacingNumber];
-                                          return (
-                                            <Radio
-                                              key={`team-radio-${radio.Utc}-${i}`}
-                                              radio={radio}
-                                              path={`${f1Url}/static/${SessionInfo.Path}${radio.Path}`}
-                                              driver={driver}
-                                            />
-                                          );
-                                        }
-                                      )}
-                                    </ul>
-                                  ) : (
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        height: "100%",
-                                      }}
-                                    >
-                                      <p>NO DATA YET</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </ResponsiveTable>
-                            </div>
-                          )}
-                        </Draggable>
-                      );
-                    case 'speed-trap':
-                      return (
-                        <Draggable key={itemId} draggableId={itemId} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              style={{
-                                ...provided.draggableProps.style,
-                                backgroundColor: snapshot.isDragging ? "var(--colour-offset)" : "transparent",
-                                borderRadius: "var(--space-1)",
-                                padding: snapshot.isDragging ? "var(--space-2)" : "0",
-                                border: snapshot.isDragging ? "2px solid var(--colour-border)" : "2px solid transparent",
-                                cursor: "grab",
-                                transition: "all 0.2s ease",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  padding: "var(--space-2) var(--space-3)",
-                                  backgroundColor: "var(--colour-offset)",
-                                  borderBottom: "1px solid var(--colour-border)",
-                                }}
-                              >
-                                <p>
-                                  <strong>SPEED TRAP DATA</strong>
-                                </p>
-                              </div>
-                              <div
-                                style={{
-                                  display: "grid",
-                                  gridTemplateColumns: speedTrapColumns,
-                                  padding: "var(--space-2) 24px var(--space-2) var(--space-3)",
-                                  backgroundColor: "var(--colour-offset)",
-                                }}
-                              >
-                                <p>DRIVER</p>
-                                <p>SECTOR 1</p>
-                                <p>SECTOR 2</p>
-                                <p>FINISH LINE</p>
-                                <p>SPEED TRAP</p>
-                              </div>
-                              {!!TimingData && !!DriverList && (
-                                <ul
-                                  style={{
-                                    listStyle: "none",
-                                    height: "200px",
-                                    overflow: "auto",
-                                    flexGrow: 1,
-                                  }}
-                                >
-                                  {Object.entries(TimingData.Lines)
-                                    .sort(sortPosition)
-                                    .map(([racingNumber, line]) => (
-                                      <SpeedTrap
-                                        key={`speed-trap-${racingNumber}`}
-                                        racingNumber={racingNumber}
-                                        driver={DriverList[racingNumber]}
-                                        line={line}
-                                        statsLine={TimingStats.Lines[racingNumber]}
-                                      />
-                                    ))}
-                                </ul>
-                              )}
-                            </div>
-                          )}
-                        </Draggable>
-                      );
-                    default:
-                      return null;
-                  }
-                })}
+                    })}
+                  </div>
+                ))}
                 {provided.placeholder}
               </div>
             )}
