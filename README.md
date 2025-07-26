@@ -1,6 +1,14 @@
-# Monaco
+# F-1 Live Dashboard
 
-Monaco is an open-source Formula 1 live timing dashboard
+Active during race sessions
+
+### When Session active
+
+<img src="public/session-on.png" alt="Session Active" width="400">
+
+### When Session Inactive
+
+<img src="public/session-off.png" alt="Session Inactive" width="400">
 
 ## Development
 
@@ -11,4 +19,4 @@ $ yarn install
 $ yarn dev
 ```
 
-View the dashboard at http://localhost:3000
+Props: [tdjsnelling](https://github.dev/tdjsnelling/monaco)

@@ -282,11 +282,11 @@ const UpcomingSessions = () => {
             {headerSubtext}
           </p>
         )}
-        {apiMessage && (
+        {/* {apiMessage && (
           <p style={{ fontSize: '0.85rem', color: 'var(--colour-fg-subtle)', marginTop: 'var(--space-2)' }}>
             {apiMessage}
           </p>
-        )}
+        )} */}
       </Header>
 
       <SessionsGrid>
