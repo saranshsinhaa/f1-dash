@@ -316,7 +316,7 @@ export default function Home() {
       : undefined;
 
   const renderTimingData1 = () => {
-    if (!TimingData || !CarData) {
+    if (!TimingData || !CarData || !CarData.Entries || CarData.Entries.length === 0) {
       return (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "300px" }}>
           <p>NO DATA YET</p>
@@ -350,7 +350,7 @@ export default function Home() {
   };
 
   const renderTimingData2 = () => {
-    if (!TimingData || !CarData) {
+    if (!TimingData || !CarData || !CarData.Entries || CarData.Entries.length === 0) {
       return (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "300px" }}>
           <p>NO DATA YET</p>
@@ -413,8 +413,8 @@ export default function Home() {
       {!!RaceControlMessages ? (
         <ul style={{ listStyle: "none", height: "200px", overflow: "auto", flexGrow: 1 }}>
           {[
-            ...Object.values(RaceControlMessages.Messages),
-            ...Object.values(SessionData.StatusSeries),
+            ...Object.values(RaceControlMessages.Messages || {}),
+            ...Object.values(SessionData?.StatusSeries || {}),
           ]
             .sort(sortUtc)
             .map((event, i) => (

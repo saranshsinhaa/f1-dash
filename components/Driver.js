@@ -122,11 +122,12 @@ const Driver = ({
   const driver = DriverList[racingNumber];
   const driverChPredict = ChampionshipPrediction?.Drivers[racingNumber];
   const carData =
-    CarData.Entries[CarData.Entries.length - 1].Cars[racingNumber].Channels;
+    CarData?.Entries?.length > 0 &&
+    CarData.Entries[CarData.Entries.length - 1]?.Cars?.[racingNumber]?.Channels;
 
-  const rpmPercent = (carData["0"] / 15000) * 100;
-  const throttlePercent = Math.min(100, carData["4"]);
-  const brakeApplied = carData["5"] > 0;
+  const rpmPercent = carData ? (carData["0"] / 15000) * 100 : 0;
+  const throttlePercent = carData ? Math.min(100, carData["4"]) : 0;
+  const brakeApplied = carData ? carData["5"] > 0 : false;
 
   const appData = TimingAppData?.Lines[racingNumber];
   let currentStint;
@@ -237,8 +238,8 @@ const Driver = ({
           </span>
         </span>
         <span>
-          <span title="Gear">{carData["3"].toString()}</span>{" "}
-          <span title="RPM">{carData["0"].toString()}</span>
+          <span title="Gear">{carData ? carData["3"].toString() : "N/A"}</span>{" "}
+          <span title="RPM">{carData ? carData["0"].toString() : "N/A"}</span>
           <br />
           <ProgressBar title="RPM">
             <span
@@ -250,7 +251,7 @@ const Driver = ({
           </ProgressBar>
         </span>
         <span>
-          <span title="Speed">{carData["2"].toString()} km/h</span>
+          <span title="Speed">{carData ? carData["2"].toString() : "N/A"} km/h</span>
           <br />
           <ProgressBar title="Throttle %">
             <span
@@ -273,10 +274,10 @@ const Driver = ({
         </span>
         <span
           title={`DRS ${
-            drsEnabledValues.includes(carData["45"]) ? "active" : "inactive"
+            carData && drsEnabledValues.includes(carData["45"]) ? "active" : "inactive"
           }`}
           style={{
-            color: drsEnabledValues.includes(carData["45"])
+            color: carData && drsEnabledValues.includes(carData["45"])
               ? "limegreen"
               : "grey",
           }}
