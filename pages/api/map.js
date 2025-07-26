@@ -6,12 +6,7 @@ export default async function handler(req, res) {
     if (!circuit) return res.status(400).send("circuit missing");
 
     const apiResponse = await fetch(
-      `https://api.multiviewer.app/api/v1/circuits/${circuit}/${new Date().getFullYear()}`,
-      {
-        headers: {
-          "User-Agent": "tdjsnelling/monaco",
-        },
-      }
+      `https://api.multiviewer.app/api/v1/circuits/${circuit}/${new Date().getFullYear()}`
     );
     if (apiResponse.status !== 200)
       return res.status(apiResponse.status).send();

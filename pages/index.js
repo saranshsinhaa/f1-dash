@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Head from "next/head";
 import moment from "moment";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -91,7 +91,7 @@ export default function Home() {
     setComponentOrder(items);
   };
 
-  const initWebsocket = (handleMessage) => {
+  const initWebsocket = useCallback((handleMessage) => {
     if (retry.current) {
       clearTimeout(retry.current);
       retry.current = undefined;
@@ -130,7 +130,7 @@ export default function Home() {
     });
 
     socket.current = ws;
-  };
+  }, [delayMs]);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -150,7 +150,7 @@ export default function Home() {
         console.error(`could not process message: ${e}`);
       }
     });
-  }, [triggerConnection]);
+  }, [triggerConnection, initWebsocket]);
 
   useEffect(() => {
     if (blocking) {
@@ -357,7 +357,7 @@ export default function Home() {
               }}
             >
               <p style={{ marginRight: "var(--space-4)" }}>
-                Data updated: {moment.utc(updated).format("HH:mm:ss.SSS")} UTC
+                Data updated: {moment.utc(updated).local().format("HH:mm:ss.SSS")}
               </p>
               <p style={{ color: "limegreen", marginRight: "var(--space-4)" }}>
                 CONNECTED
@@ -625,7 +625,7 @@ export default function Home() {
                                                 marginRight: "var(--space-4)",
                                               }}
                                             >
-                                              {moment.utc(event.Utc).format("HH:mm:ss")}
+                                              {moment.utc(event.Utc).local().format("HH:mm:ss")}
                                               {event.Lap && ` / Lap ${event.Lap}`}
                                             </span>
                                             {event.Category === "Flag" && (

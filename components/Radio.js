@@ -27,12 +27,15 @@ const Radio = ({ radio, path, driver }) => {
       setProgress(0);
     };
 
-    if (audioRef.current) {
-      audioRef.current.addEventListener("ended", handleEnd);
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      audioElement.addEventListener("ended", handleEnd);
     }
 
     return () => {
-      audioRef.current?.removeEventListener("ended", handleEnd);
+      if (audioElement) {
+        audioElement.removeEventListener("ended", handleEnd);
+      }
     };
   }, []);
 
@@ -59,7 +62,7 @@ const Radio = ({ radio, path, driver }) => {
           marginRight: "var(--space-4)",
         }}
       >
-        {moment.utc(radio.Utc).format("HH:mm:ss")}
+        {moment.utc(radio.Utc).local().format("HH:mm:ss")}
       </span>
       <span
         style={{

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { transparentize } from "polished";
 
@@ -138,17 +138,18 @@ const Driver = ({
   const lineStats = Object.values(line.Stats ?? {});
 
   const [posChanged, setPosChanged] = useState();
-  const [prevPos, setPrevPos] = useState();
+  const prevPosRef = useRef();
+  
   useEffect(() => {
     const pos = Number(line.Position);
-    if (prevPos !== undefined && pos !== prevPos) {
-      setPosChanged(getPosChangeColour(pos, prevPos));
+    if (prevPosRef.current !== undefined && pos !== prevPosRef.current) {
+      setPosChanged(getPosChangeColour(pos, prevPosRef.current));
       setTimeout(() => {
         setPosChanged(undefined);
       }, 2000);
     }
 
-    setPrevPos(pos);
+    prevPosRef.current = pos;
   }, [line.Position]);
 
   return (

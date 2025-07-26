@@ -84,11 +84,7 @@ const Map = ({
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch(`/api/map?circuit=${circuit}`, {
-        headers: {
-          "User-Agent": "tdjsnelling/monaco",
-        },
-      });
+      const res = await fetch(`/api/map?circuit=${circuit}`);
       if (res.status === 200) {
         const rawData = await res.json();
 
