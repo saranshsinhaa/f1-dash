@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Head from "next/head";
 import moment from "moment";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import ResponsiveTable from "@monaco/components/ResponsiveTable";
 import Driver, { TableHeader } from "@monaco/components/Driver";
 import Radio from "@monaco/components/Radio";
@@ -70,6 +69,23 @@ export default function Home() {
   const [triggerConnection, setTriggerConnection] = useState(0);
   const [triggerTick, setTriggerTick] = useState(0);
   
+  const [showLayoutModal, setShowLayoutModal] = useState(false);
+  const [tempLayout, setTempLayout] = useState([]);
+  const [layout, setLayout] = useState([
+    ['timing-data-1', 'track-map'],
+    ['timing-data-2', 'race-control-messages'],
+    ['team-radio', 'speed-trap']
+  ]);
+  
+  const availableComponents = [
+    { id: 'timing-data-1', name: 'Live Timing (1-10)' },
+    { id: 'timing-data-2', name: 'Live Timing (11-20)' },
+    { id: 'track-map', name: 'Track Map' },
+    { id: 'race-control-messages', name: 'Race Control' },
+    { id: 'team-radio', name: 'Team Radio' },
+    { id: 'speed-trap', name: 'Speed Trap' },
+  ];
+  
   const [componentOrder, setComponentOrder] = useState([
     'timing-data-1',
     'timing-data-2', 
@@ -83,22 +99,20 @@ export default function Home() {
   const socket = useRef();
   const retry = useRef();
 
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-    
-    const items = Array.from(componentOrder);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    
-    setComponentOrder(items);
+  const openLayoutModal = () => {
+    setTempLayout(layout.map(row => [...row]));
+    setShowLayoutModal(true);
   };
 
-  const groupComponentsIntoRows = (components) => {
-    const rows = [];
-    for (let i = 0; i < components.length; i += 3) {
-      rows.push(components.slice(i, i + 3));
-    }
-    return rows;
+  const closeLayoutModal = () => {
+    setShowLayoutModal(false);
+    setTempLayout([]);
+  };
+
+  const saveLayout = (newLayout) => {
+    setLayout(newLayout);
+    setShowLayoutModal(false);
+    setTempLayout([]);
   };
 
   const getComponentWidth = (componentsInRow) => {
@@ -330,7 +344,7 @@ export default function Home() {
         <div style={{ padding: "var(--space-2) var(--space-3)", backgroundColor: "var(--colour-offset)", borderBottom: "1px solid var(--colour-border)" }}>
           <p><strong>LIVE TIMING DATA (1-10)</strong></p>
         </div>
-        <div>
+        <div style={{ overflowX: "auto", flexGrow: 1 }}>
           <TableHeader />
           {lines.slice(0, 10).map(([racingNumber, line]) => (
             <Driver
@@ -364,7 +378,7 @@ export default function Home() {
         <div style={{ padding: "var(--space-2) var(--space-3)", backgroundColor: "var(--colour-offset)", borderBottom: "1px solid var(--colour-border)" }}>
           <p><strong>LIVE TIMING DATA (11-20)</strong></p>
         </div>
-        <div>
+        <div style={{ overflowX: "auto", flexGrow: 1 }}>
           <TableHeader />
           {lines.slice(10, 20).map(([racingNumber, line]) => (
             <Driver
@@ -526,6 +540,187 @@ export default function Home() {
     </div>
   );
 
+  const LayoutModal = () => {
+    const addComponentToRow = (rowIndex, componentId) => {
+      if (tempLayout[rowIndex].length >= 3) return;
+      
+      const newLayout = tempLayout.map(row => row.filter(id => id !== componentId));
+      newLayout[rowIndex] = [...newLayout[rowIndex], componentId];
+      setTempLayout(newLayout);
+    };
+
+    const removeComponentFromRow = (rowIndex, componentId) => {
+      const newLayout = [...tempLayout];
+      newLayout[rowIndex] = newLayout[rowIndex].filter(id => id !== componentId);
+      setTempLayout(newLayout);
+    };
+
+    const getUsedComponents = () => {
+      return tempLayout.flat();
+    };
+
+    const getAvailableComponents = () => {
+      const used = getUsedComponents();
+      return availableComponents.filter(comp => !used.includes(comp.id));
+    };
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}>
+        <div style={{
+          backgroundColor: 'var(--colour-bg)',
+          border: '1px solid var(--colour-border)',
+          borderRadius: 'var(--space-2)',
+          padding: 'var(--space-4)',
+          maxWidth: '800px',
+          width: '90%',
+          maxHeight: '80vh',
+          overflow: 'auto',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+            <h2 style={{ margin: 0 }}>Configure Layout</h2>
+            <button onClick={closeLayoutModal} style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: 'var(--colour-fg)',
+            }}>×</button>
+          </div>
+
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <h3>Available Components:</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              {getAvailableComponents().map(comp => (
+                <div key={comp.id} style={{
+                  backgroundColor: 'var(--colour-offset)',
+                  border: '1px solid var(--colour-border)',
+                  borderRadius: 'var(--space-1)',
+                  padding: 'var(--space-2)',
+                  fontSize: '14px',
+                }}>
+                  {comp.name}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {tempLayout.map((row, rowIndex) => (
+            <div key={rowIndex} style={{ marginBottom: 'var(--space-3)' }}>
+              <h4>Row {rowIndex + 1} ({row.length}/3 components):</h4>
+              <div style={{
+                border: '2px dashed var(--colour-border)',
+                borderRadius: 'var(--space-1)',
+                padding: 'var(--space-3)',
+                minHeight: '60px',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 'var(--space-2)',
+                alignItems: 'center',
+              }}>
+                {row.length === 0 ? (
+                  <span style={{ color: 'var(--colour-border)', fontStyle: 'italic' }}>
+                    Empty row (minimum 1 component required)
+                  </span>
+                ) : (
+                  row.map(componentId => {
+                    const comp = availableComponents.find(c => c.id === componentId);
+                    return (
+                      <div key={componentId} style={{
+                        backgroundColor: 'var(--colour-bg)',
+                        border: '1px solid var(--colour-border)',
+                        borderRadius: 'var(--space-1)',
+                        padding: 'var(--space-2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-2)',
+                      }}>
+                        <span>{comp?.name}</span>
+                        <button
+                          onClick={() => removeComponentFromRow(rowIndex, componentId)}
+                          style={{
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: 'red',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                          }}
+                        >×</button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              
+              <div style={{ marginTop: 'var(--space-2)', display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                {getAvailableComponents().map(comp => (
+                  <button
+                    key={comp.id}
+                    onClick={() => addComponentToRow(rowIndex, comp.id)}
+                    disabled={row.length >= 3}
+                    style={{
+                      backgroundColor: row.length >= 3 ? 'var(--colour-offset)' : 'var(--colour-bg)',
+                      border: '1px solid var(--colour-border)',
+                      borderRadius: 'var(--space-1)',
+                      padding: 'var(--space-1) var(--space-2)',
+                      cursor: row.length >= 3 ? 'not-allowed' : 'pointer',
+                      opacity: row.length >= 3 ? 0.5 : 1,
+                      fontSize: '12px',
+                    }}
+                  >
+                    + {comp.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
+            <button onClick={closeLayoutModal} style={{
+              backgroundColor: 'var(--colour-offset)',
+              border: '1px solid var(--colour-border)',
+              borderRadius: 'var(--space-1)',
+              padding: 'var(--space-2) var(--space-3)',
+              cursor: 'pointer',
+            }}>
+              Cancel
+            </button>
+            <button 
+              onClick={() => {
+                const isValid = tempLayout.every(row => row.length >= 1);
+                if (isValid) {
+                  saveLayout(tempLayout);
+                } else {
+                  alert('Each row must have at least 1 component');
+                }
+              }}
+              style={{
+                backgroundColor: 'var(--colour-bg)',
+                border: '1px solid var(--colour-border)',
+                borderRadius: 'var(--space-1)',
+                padding: 'var(--space-2) var(--space-3)',
+                cursor: 'pointer',
+                color: 'var(--colour-fg)',
+              }}
+            >
+              Save Layout
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderComponent = (componentId) => {
     switch (componentId) {
       case 'timing-data-1':
@@ -607,6 +802,20 @@ export default function Home() {
                 alignItems: "flex-start",
               }}
             >
+              <button
+                onClick={openLayoutModal}
+                style={{
+                  backgroundColor: "var(--colour-bg)",
+                  border: "1px solid var(--colour-border)",
+                  borderRadius: "var(--space-1)",
+                  padding: "var(--space-2) var(--space-3)",
+                  cursor: "pointer",
+                  color: "var(--colour-fg)",
+                  marginRight: "var(--space-4)",
+                }}
+              >
+                Layout
+              </button>
               <p style={{ marginRight: "var(--space-4)" }}>
                 Data updated: {moment.utc(updated).local().format("HH:mm:ss.SSS")}
               </p>
@@ -663,80 +872,55 @@ export default function Home() {
           )}
         </>
 
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="main-content">
-            {(provided, snapshot) => (
-              <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "var(--space-3)",
-                  padding: "var(--space-3)",
-                }}
-              >
-                {groupComponentsIntoRows(componentOrder).map((row, rowIndex) => (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-3)",
+            padding: "var(--space-3)",
+          }}
+        >
+          {layout.map((row, rowIndex) => (
+            <div
+              key={`row-${rowIndex}`}
+              style={{
+                display: "flex",
+                gap: "var(--space-3)",
+                width: "100%",
+                alignItems: "stretch",
+              }}
+            >
+              {row.map((componentId, indexInRow) => (
+                <div
+                  key={componentId}
+                  style={{
+                    width: getComponentWidth(row.length),
+                    display: "flex",
+                    flexDirection: "column",
+                    flex: "1",
+                  }}
+                >
                   <div
-                    key={`row-${rowIndex}`}
                     style={{
+                      backgroundColor: "var(--colour-bg)",
+                      border: "1px solid var(--colour-border)",
+                      borderRadius: "var(--space-1)",
+                      overflow: "hidden",
                       display: "flex",
-                      gap: "var(--space-3)",
-                      width: "100%",
-                      alignItems: "stretch",
+                      flexDirection: "column",
+                      height: "100%",
+                      minHeight: "400px",
                     }}
                   >
-                    {row.map((itemId, indexInRow) => {
-                      const globalIndex = rowIndex * 3 + indexInRow;
-                      const isEmptyPlaceholder = itemId === 'empty-placeholder';
-                      
-                      return (
-                        <Draggable key={itemId} draggableId={itemId} index={globalIndex}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              style={{
-                                ...provided.draggableProps.style,
-                                width: getComponentWidth(row.length),
-                                backgroundColor: snapshot.isDragging ? "var(--colour-offset)" : "transparent",
-                                borderRadius: "var(--space-1)",
-                                padding: snapshot.isDragging ? "var(--space-2)" : "0",
-                                border: snapshot.isDragging ? "2px solid var(--colour-border)" : "2px solid transparent",
-                                cursor: "grab",
-                                transition: "all 0.2s ease",
-                                display: "flex",
-                                flexDirection: "column",
-                                flex: "1",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  backgroundColor: isEmptyPlaceholder ? "transparent" : "var(--colour-bg)",
-                                  border: isEmptyPlaceholder ? "none" : "1px solid var(--colour-border)",
-                                  borderRadius: "var(--space-1)",
-                                  overflow: "hidden",
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  height: "100%",
-                                  minHeight: isEmptyPlaceholder ? "100px" : "400px",
-                                }}
-                              >
-                                {renderComponent(itemId)}
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      );
-                    })}
+                    {renderComponent(componentId)}
                   </div>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {showLayoutModal && <LayoutModal />}
       </main>
     </>
   );
