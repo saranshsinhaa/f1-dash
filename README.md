@@ -19,4 +19,4 @@ $ yarn install
 $ yarn dev
 ```
 
-Props: [tdjsnelling](https://github.dev/tdjsnelling/monaco)
+Props: [tdjsnelling](https://github.com/tdjsnelling/monaco)
