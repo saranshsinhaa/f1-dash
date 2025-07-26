@@ -8,6 +8,7 @@ import Radio from "@monaco/components/Radio";
 import Map from "@monaco/components/Map";
 import Input from "@monaco/components/Input";
 import SpeedTrap, { speedTrapColumns } from "@monaco/components/SpeedTrap";
+import UpcomingSessions from "@monaco/components/UpcomingSessions";
 
 const f1Url = "https://livetiming.formula1.com";
 
@@ -262,17 +263,15 @@ export default function Home() {
           <div
             style={{
               width: "100vw",
-              height: "100vh",
+              minHeight: "100vh",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
+              padding: "var(--space-4)",
             }}
           >
-            <p style={{ marginBottom: "var(--space-4)" }}>
-              <strong>🚫 NO SESSION 🚫</strong>
-            </p>
-            <p>Come back later when there is a live session</p>
+            <UpcomingSessions />
           </div>
         </main>
       </>
