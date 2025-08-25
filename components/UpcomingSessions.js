@@ -139,10 +139,10 @@ const ErrorContainer = styled.div`
 
 const getSessionTypeDisplay = (sessionType, sessionName) => {
   if (sessionType === 'Practice') {
-    if (sessionName.includes('1')) return 'P1';
-    if (sessionName.includes('2')) return 'P2';
-    if (sessionName.includes('3')) return 'P3';
-    return 'P';
+    if (sessionName.includes('1')) return 'FP1';
+    if (sessionName.includes('2')) return 'FP2';
+    if (sessionName.includes('3')) return 'FP3';
+    return 'FP';
   }
   if (sessionType === 'Qualifying') return 'Q';
   if (sessionType === 'Race') return 'R';

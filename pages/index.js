@@ -153,7 +153,6 @@ export default function Home() {
           if (permission === 'granted') {
             setNotificationsEnabled(true);
             localStorage.setItem('f1-notifications-enabled', 'true');
-            // Show test notification immediately after permission granted
             new Notification('🏁 Test Notification', {
               body: 'This is a test notification for your F1 app!',
               icon: '/icon.png'
@@ -342,6 +341,7 @@ export default function Home() {
   const {
     Heartbeat,
     SessionInfo,
+    SessionStatus,
     TrackStatus,
     LapCount,
     ExtrapolatedClock,
@@ -358,7 +358,13 @@ export default function Home() {
     ChampionshipPrediction,
   } = liveState;
 
-  if (!Heartbeat)
+  const sessionStatusActive = SessionStatus?.Status === 'Started' || SessionStatus?.Status === 'Live' || SessionStatus?.Status === 'Active';
+  
+  const hasActiveTimingData = TimingData && Object.keys(TimingData).length > 0;
+  
+  const hasLiveSession = Heartbeat && (SessionInfo || SessionData) && (sessionStatusActive || hasActiveTimingData || CarData || Position);
+  
+  if (!hasLiveSession)
     return (
       <>
         <Head>
