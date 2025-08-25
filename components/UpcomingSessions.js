@@ -196,6 +196,8 @@ const UpcomingSessions = () => {
   const [currentTime, setCurrentTime] = useState(moment());
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -204,12 +206,47 @@ const UpcomingSessions = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowInstallButton(true);
+    };
+
+    const handleAppInstalled = () => {
+      setShowInstallButton(false);
+      setInstallPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallButton(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
   const openNotificationModal = () => {
     setShowNotificationModal(true);
   };
 
   const closeNotificationModal = () => {
     setShowNotificationModal(false);
+  };
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    
+    setInstallPrompt(null);
+    setShowInstallButton(false);
   };
 
   const testNotification = () => {
@@ -460,6 +497,16 @@ const UpcomingSessions = () => {
           <NotificationButton onClick={openNotificationModal}>
             🔔 Notifications
           </NotificationButton>
+          {showInstallButton && (
+            <NotificationButton
+              style={{
+                marginLeft: "var(--space-2)",
+              }}
+              onClick={handleInstallClick}
+            >
+              📱 Install
+            </NotificationButton>
+          )}
         </Header>
         <LoadingContainer>
           <p>Loading session data...</p>
@@ -478,6 +525,16 @@ const UpcomingSessions = () => {
           <NotificationButton onClick={openNotificationModal}>
             🔔 Notifications
           </NotificationButton>
+          {showInstallButton && (
+            <NotificationButton
+              style={{
+                marginLeft: "var(--space-2)",
+              }}
+              onClick={handleInstallClick}
+            >
+              📱 Install
+            </NotificationButton>
+          )}
         </Header>
         <ErrorContainer>
           <p>{error}</p>
@@ -497,11 +554,28 @@ const UpcomingSessions = () => {
           <NotificationButton onClick={openNotificationModal}>
             🔔 Notifications
           </NotificationButton>
+          {showInstallButton && (
+            <NotificationButton
+              style={{
+                marginLeft: "var(--space-2)",
+              }}
+              onClick={handleInstallClick}
+            >
+              📱 Install
+            </NotificationButton>
+          )}
         </Header>
         <ErrorContainer>
           <p>No session data available.</p>
-          <p>The F1 API might be experiencing issues or there may be no data for this period.</p>
-          {apiMessage && <p><em>{apiMessage}</em></p>}
+          <p>
+            The F1 API might be experiencing issues or there may be no data for
+            this period.
+          </p>
+          {apiMessage && (
+            <p>
+              <em>{apiMessage}</em>
+            </p>
+          )}
         </ErrorContainer>
         {showNotificationModal && <NotificationModal />}
       </Container>
@@ -519,13 +593,29 @@ const UpcomingSessions = () => {
         <Title>🏁 NO LIVE SESSION ACTIVE 🏁</Title>
         <Subtitle>{headerTitle}</Subtitle>
         {!isUpcoming && (
-          <p style={{ fontSize: '0.9rem', color: 'var(--colour-fg-subtle)', fontStyle: 'italic' }}>
+          <p
+            style={{
+              fontSize: "0.9rem",
+              color: "var(--colour-fg-subtle)",
+              fontStyle: "italic",
+            }}
+          >
             {headerSubtext}
           </p>
         )}
         <NotificationButton onClick={openNotificationModal}>
           🔔 Notifications
         </NotificationButton>
+        {showInstallButton && (
+          <NotificationButton
+            style={{
+              marginLeft: "var(--space-2)",
+            }}
+            onClick={handleInstallClick}
+          >
+            📱 Install
+          </NotificationButton>
+        )}
         {/* {apiMessage && (
           <p style={{ fontSize: '0.85rem', color: 'var(--colour-fg-subtle)', marginTop: 'var(--space-2)' }}>
             {apiMessage}
@@ -538,30 +628,36 @@ const UpcomingSessions = () => {
           <SessionCard key={session.session_key}>
             <SessionHeader>
               <SessionType type={session.session_type}>
-                {getSessionTypeDisplay(session.session_type, session.session_name)}
+                {getSessionTypeDisplay(
+                  session.session_type,
+                  session.session_name
+                )}
               </SessionType>
               <SessionName>{session.session_name}</SessionName>
             </SessionHeader>
 
             <MeetingName>{session.meeting_name}</MeetingName>
-            
+
             <CircuitName>{session.circuit_short_name}</CircuitName>
 
             <LocationInfo>
               <span>🏁</span>
-              <span>{session.location}, {session.country_name}</span>
+              <span>
+                {session.location}, {session.country_name}
+              </span>
             </LocationInfo>
 
             <TimeInfo>
               <DateTime>
-                {moment(session.date_start).format('dddd, MMMM Do YYYY')}
+                {moment(session.date_start).format("dddd, MMMM Do YYYY")}
               </DateTime>
               <DateTime>
-                {moment(session.date_start).format('h:mm A')} (Your local time)
+                {moment(session.date_start).format("h:mm A")} (Your local time)
               </DateTime>
               <Countdown>
-                {isUpcoming ? formatCountdown(session.date_start) : 
-                 moment(session.date_start).fromNow()}
+                {isUpcoming
+                  ? formatCountdown(session.date_start)
+                  : moment(session.date_start).fromNow()}
               </Countdown>
             </TimeInfo>
           </SessionCard>

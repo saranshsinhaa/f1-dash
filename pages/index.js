@@ -79,6 +79,8 @@ export default function Home() {
   
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
   
   const availableComponents = [
     { id: 'timing-data-1', name: 'Live Timing (1-10)' },
@@ -109,6 +111,31 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowInstallButton(true);
+    };
+
+    const handleAppInstalled = () => {
+      setShowInstallButton(false);
+      setInstallPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallButton(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
   const openLayoutModal = () => {
     setTempLayout(layout.map(row => [...row]));
     setShowLayoutModal(true);
@@ -131,6 +158,23 @@ export default function Home() {
 
   const closeNotificationModal = () => {
     setShowNotificationModal(false);
+  };
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    
+    installPrompt.prompt();
+    
+    const { outcome } = await installPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+    } else {
+      console.log('User dismissed the install prompt');
+    }
+    
+    setInstallPrompt(null);
+    setShowInstallButton(false);
   };
 
   const testNotification = () => {
@@ -1022,6 +1066,22 @@ export default function Home() {
               >
                 🔔 Notifications
               </button>
+              {showInstallButton && (
+                <button
+                  onClick={handleInstallClick}
+                  style={{
+                    backgroundColor: "var(--colour-bg)",
+                    border: "1px solid var(--colour-border)",
+                    borderRadius: "var(--space-1)",
+                    padding: "var(--space-2) var(--space-3)",
+                    cursor: "pointer",
+                    color: "var(--colour-fg)",
+                    marginRight: "var(--space-4)",
+                  }}
+                >
+                  📱 Install
+                </button>
+              )}
               <p style={{ marginRight: "var(--space-4)" }}>
                 Data updated: {moment.utc(updated).local().format("HH:mm:ss.SSS")}
               </p>
