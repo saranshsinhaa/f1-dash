@@ -77,6 +77,9 @@ export default function Home() {
     ['team-radio', 'speed-trap']
   ]);
   
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  
   const availableComponents = [
     { id: 'timing-data-1', name: 'Live Timing (1-10)' },
     { id: 'timing-data-2', name: 'Live Timing (11-20)' },
@@ -99,6 +102,13 @@ export default function Home() {
   const socket = useRef();
   const retry = useRef();
 
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const storedEnabled = localStorage.getItem('f1-notifications-enabled') === 'true';
+      setNotificationsEnabled(storedEnabled);
+    }
+  }, []);
+
   const openLayoutModal = () => {
     setTempLayout(layout.map(row => [...row]));
     setShowLayoutModal(true);
@@ -113,6 +123,68 @@ export default function Home() {
     setLayout(newLayout);
     setShowLayoutModal(false);
     setTempLayout([]);
+  };
+
+  const openNotificationModal = () => {
+    setShowNotificationModal(true);
+  };
+
+  const closeNotificationModal = () => {
+    setShowNotificationModal(false);
+  };
+
+  const testNotification = () => {
+    if ('serviceWorker' in navigator && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        navigator.serviceWorker.ready.then((registration) => {
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'TEST_NOTIFICATION'
+            });
+          } else {
+            new Notification('🏁 Test Notification', {
+              body: 'This is a test notification for your F1-Dash app!',
+              icon: '/icon.png'
+            });
+          }
+        });
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            setNotificationsEnabled(true);
+            localStorage.setItem('f1-notifications-enabled', 'true');
+            // Show test notification immediately after permission granted
+            new Notification('🏁 Test Notification', {
+              body: 'This is a test notification for your F1 app!',
+              icon: '/icon.png'
+            });
+          }
+        });
+      } else {
+        alert('Notifications are blocked. Please enable them in your browser settings.');
+      }
+    }
+  };
+
+  const toggleNotifications = () => {
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      localStorage.setItem('f1-notifications-enabled', 'false');
+    } else {
+      if (Notification.permission === 'granted') {
+        setNotificationsEnabled(true);
+        localStorage.setItem('f1-notifications-enabled', 'true');
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            setNotificationsEnabled(true);
+            localStorage.setItem('f1-notifications-enabled', 'true');
+          }
+        });
+      } else {
+        alert('Notifications are blocked. Please enable them in your browser settings.');
+      }
+    }
   };
 
   const getComponentWidth = (componentsInRow) => {
@@ -721,6 +793,120 @@ export default function Home() {
     );
   };
 
+  const NotificationModal = () => {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}>
+        <div style={{
+          backgroundColor: 'var(--colour-bg)',
+          border: '1px solid var(--colour-border)',
+          borderRadius: 'var(--space-2)',
+          padding: 'var(--space-4)',
+          maxWidth: '500px',
+          width: '90%',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+            <h2 style={{ margin: 0 }}>🔔 Notification Settings</h2>
+            <button onClick={closeNotificationModal} style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: 'var(--colour-fg)',
+            }}>×</button>
+          </div>
+
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <p style={{ marginBottom: 'var(--space-3)', color: 'var(--colour-fg)' }}>
+              Get notified 30 minutes before each F1 session starts.
+            </p>
+            
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: 'var(--space-4)',
+              padding: 'var(--space-3)',
+              backgroundColor: 'var(--colour-offset)',
+              borderRadius: 'var(--space-1)',
+            }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                cursor: 'pointer',
+                color: 'var(--colour-fg)',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={toggleNotifications}
+                  style={{
+                    marginRight: 'var(--space-2)',
+                    transform: 'scale(1.2)',
+                  }}
+                />
+                Enable F1 Session Notifications
+              </label>
+            </div>
+
+            <div style={{ marginBottom: 'var(--space-3)' }}>
+              <p style={{ 
+                fontSize: '0.9rem', 
+                color: '#999', 
+                marginBottom: 'var(--space-2)' 
+              }}>
+                Permission status: <strong style={{ color: notificationsEnabled ? '#4caf50' : '#f44336' }}>
+                  {Notification.permission === 'granted' ? 'Granted' : 
+                   Notification.permission === 'denied' ? 'Denied' : 'Not requested'}
+                </strong>
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+            <button 
+              onClick={testNotification}
+              disabled={!notificationsEnabled}
+              style={{
+                backgroundColor: notificationsEnabled ? '#4caf50' : 'var(--colour-offset)',
+                border: '1px solid var(--colour-border)',
+                borderRadius: 'var(--space-1)',
+                padding: 'var(--space-2) var(--space-3)',
+                cursor: notificationsEnabled ? 'pointer' : 'not-allowed',
+                color: notificationsEnabled ? 'white' : '#999',
+                opacity: notificationsEnabled ? 1 : 0.6,
+              }}
+            >
+              🧪 Test Notification
+            </button>
+            <button 
+              onClick={closeNotificationModal}
+              style={{
+                backgroundColor: 'var(--colour-bg)',
+                border: '1px solid var(--colour-border)',
+                borderRadius: 'var(--space-1)',
+                padding: 'var(--space-2) var(--space-3)',
+                cursor: 'pointer',
+                color: 'var(--colour-fg)',
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderComponent = (componentId) => {
     switch (componentId) {
       case 'timing-data-1':
@@ -815,6 +1001,20 @@ export default function Home() {
                 }}
               >
                 Layout
+              </button>
+              <button
+                onClick={openNotificationModal}
+                style={{
+                  backgroundColor: "var(--colour-bg)",
+                  border: "1px solid var(--colour-border)",
+                  borderRadius: "var(--space-1)",
+                  padding: "var(--space-2) var(--space-3)",
+                  cursor: "pointer",
+                  color: "var(--colour-fg)",
+                  marginRight: "var(--space-4)",
+                }}
+              >
+                🔔 Notifications
               </button>
               <p style={{ marginRight: "var(--space-4)" }}>
                 Data updated: {moment.utc(updated).local().format("HH:mm:ss.SSS")}
@@ -921,6 +1121,7 @@ export default function Home() {
         </div>
 
         {showLayoutModal && <LayoutModal />}
+        {showNotificationModal && <NotificationModal />}
       </main>
     </>
   );

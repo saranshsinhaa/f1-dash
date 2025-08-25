@@ -180,6 +180,34 @@ const UpcomingSessions = () => {
   const [apiMessage, setApiMessage] = useState('');
   const [currentTime, setCurrentTime] = useState(moment());
 
+
+  const scheduleSessionNotifications = (sessions) => {
+    const notificationsEnabled = localStorage.getItem('f1-notifications-enabled') === 'true';
+    
+    if ('serviceWorker' in navigator && Notification.permission === 'granted' && notificationsEnabled) {
+      navigator.serviceWorker.ready.then((registration) => {
+        navigator.serviceWorker.controller?.postMessage({
+          type: 'CLEAR_NOTIFICATIONS'
+        });
+        
+        sessions.forEach((session) => {
+          const sessionTime = new Date(session.date_start);
+          const now = new Date();
+          const notificationTime = new Date(sessionTime.getTime() - 30 * 60 * 1000);
+          
+          if (notificationTime > now) {
+            navigator.serviceWorker.controller?.postMessage({
+              type: 'SCHEDULE_NOTIFICATION',
+              sessionName: session.session_name,
+              sessionTime: session.date_start,
+              sessionLocation: `${session.location}, ${session.country_name}`
+            });
+          }
+        });
+      });
+    }
+  };
+
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -190,16 +218,19 @@ const UpcomingSessions = () => {
         }
         const data = await response.json();
         
-        // Handle new API response format
         if (data.sessions) {
           setSessions(data.sessions);
           setIsUpcoming(data.upcoming);
           setApiMessage(data.message || '');
+          
+          if (data.upcoming) {
+            scheduleSessionNotifications(data.sessions);
+          }
         } else {
-          // Handle old format (array of sessions)
           setSessions(data);
           setIsUpcoming(true);
           setApiMessage('');
+          scheduleSessionNotifications(data);
         }
         setError(null);
       } catch (err) {

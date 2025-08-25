@@ -1,4 +1,5 @@
 import { createGlobalStyle } from "styled-components";
+import { useEffect } from "react";
 
 const GlobalStyle = createGlobalStyle`
   :root {
@@ -54,6 +55,24 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 export default function App({ Component, pageProps }) {
+  useEffect(() => {
+    if ('serviceWorker' in navigator && 'Notification' in window) {
+      navigator.serviceWorker.register('/worker.js')
+        .then((registration) => {
+          console.log('Service Worker registered:', registration);
+          
+          if (Notification.permission === 'default') {
+            Notification.requestPermission().then((permission) => {
+              console.log('Notification permission:', permission);
+            });
+          }
+        })
+        .catch((error) => {
+          console.error('Service Worker registration failed:', error);
+        });
+    }
+  }, []);
+
   return (
     <>
       <GlobalStyle />
